@@ -1,0 +1,16 @@
+[project]
+name = "boltz-fee-bot"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "aiohttp[speedups]>=3.11.11",
+    "aiosqlite>=0.20.0",
+    "pydantic>=2.10.4",
+    "pydantic-settings>=2.7.1",
+    "python-telegram-bot[job-queue]>=21.10",
+    "requests>=2.32.3",
+    "ruff>=0.8.6",
+    "sqlalchemy>=2.0.37",
+]
