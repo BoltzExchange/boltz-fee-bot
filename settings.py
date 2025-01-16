@@ -1,6 +1,7 @@
 from pydantic import Field
 from pydantic_settings import BaseSettings
 
+
 class Settings(BaseSettings):
     telegram_bot_token: str = Field(
         ..., env="TELEGRAM_BOT_TOKEN", description="Telegram bot token"

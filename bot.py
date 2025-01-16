@@ -2,12 +2,12 @@ import logging
 
 import aiohttp
 from pydantic import ValidationError
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from telegram import Update, Bot
 from telegram.ext import Application, CommandHandler, ContextTypes
 from settings import Settings
 
-from db import init_db, add_subscriber, remove_subscriber, get_subscribers, Base
+from db import add_subscriber, remove_subscriber, get_subscribers, Base
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
 
@@ -71,7 +71,7 @@ def main():
     try:
         settings = Settings()
 
-        engine = init_db(settings.database_url)
+        engine = create_async_engine(settings.database_url)
         async_session = async_sessionmaker(engine, expire_on_commit=False)
 
         application = Application.builder().token(settings.telegram_bot_token).build()
