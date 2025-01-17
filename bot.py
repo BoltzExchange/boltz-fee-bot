@@ -43,14 +43,14 @@ async def unsubscribe(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("You are not subscribed.")
 
 
-async def notify_subscribers(bot: Bot, session: AsyncSession, fees: float):
+async def notify_subscribers(bot: Bot, session: AsyncSession, swap_type: str, fees: float):
     subscribers = await get_subscribers(session)
 
     for chat_id in subscribers:
         try:
             await bot.send_message(
                 chat_id=chat_id,
-                text=f"Alert: Fees are negative! Current value: {fees}",
+                text=f"Fees for {swap_type} swaps at https://pro.boltz.exchange: {fees}%",
             )
             logging.info(f"Notification sent to {chat_id}")
         except Exception as e:
@@ -91,7 +91,8 @@ def main():
             previous = app.bot_data.get("fees", current)
             if previous != current and current < settings.fee_threshold:
                 async with async_session() as session:
-                    await notify_subscribers(app.bot, session, current)
+                    # TODO: other swap types
+                    await notify_subscribers(app.bot,  session, "submarine", current)
             app.bot_data["fees"] = current
 
         application.post_init = post_init

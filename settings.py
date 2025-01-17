@@ -7,7 +7,7 @@ class Settings(BaseSettings):
         ..., env="TELEGRAM_BOT_TOKEN", description="Telegram bot token"
     )
     fee_threshold: float = Field(
-        ..., env="FEE_THRESHOLD", description="Fee threshold for alerts"
+        0, env="FEE_THRESHOLD", description="Fee threshold for alerts"
     )
     check_interval: int = Field(
         60, env="CHECK_INTERVAL", description="Interval to check API (seconds)"
