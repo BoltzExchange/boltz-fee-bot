@@ -16,6 +16,7 @@ from db import (
     upsert_previous,
 )
 from consts import SUBMARINE_SWAP_TYPE, Fees
+from url_params import encode_url_params
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
 
@@ -64,11 +65,13 @@ async def notify_subscribers(
         f"Notifying {len(subscribers)} subscribers about {from_currency} -> {to_currency} {swap_type} fees"
     )
 
+    message = f"Fees for {swap_type} {from_currency} -> {to_currency} at {encode_url_params(swap_type, from_currency, to_currency)}: {fees}%"
+
     for chat_id in subscribers:
         try:
             await bot.send_message(
                 chat_id=chat_id,
-                text=f"Fees for {swap_type} {from_currency} -> {to_currency} at https://pro.boltz.exchange: {fees}%",
+                text=message,
             )
             logging.debug(f"Notification sent to {chat_id}")
         except Exception as e:
