@@ -9,6 +9,7 @@ wheels/
 # Virtual environments
 .venv
 .idea
+.vscode
 
 .env
 database.sqlite

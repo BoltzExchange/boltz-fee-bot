@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     )
     database_url: str = Field(
         env="DATABASE_URL",
-        description="Database URL for SQLite or other databases",
+        description="Database URL for PostgreSQL",
     )
 
     class Config:
