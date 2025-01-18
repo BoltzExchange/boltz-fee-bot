@@ -107,7 +107,7 @@ def main():
 
         async def monitor_fees(app: Application):
             current = await get_fees(settings.api_url)
-            previous = app.bot_data.get("fees", current)
+            previous = app.bot_data.get("fees")
             if previous:
                 for from_currency, pairs in current.items():
                     for to_currency, fee in pairs.items():
