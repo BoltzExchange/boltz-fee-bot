@@ -8,6 +8,7 @@ from telegram.ext import Application, CommandHandler, ContextTypes
 from settings import Settings
 
 from db import add_subscriber, remove_subscriber, get_subscribers, Base
+from consts import SUBMARINE_SWAP_TYPE
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
 
@@ -43,27 +44,45 @@ async def unsubscribe(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("You are not subscribed.")
 
 
-async def notify_subscribers(bot: Bot, session: AsyncSession, swap_type: str, fees: float):
+async def notify_subscribers(
+    bot: Bot,
+    session: AsyncSession,
+    swap_type: str,
+    from_currency: str,
+    to_currency: str,
+    fees: float,
+):
     subscribers = await get_subscribers(session)
+    logging.info(
+        f"Notifying {len(subscribers)} subscribers about {from_currency} -> {to_currency} {swap_type} fees"
+    )
 
     for chat_id in subscribers:
         try:
             await bot.send_message(
                 chat_id=chat_id,
-                text=f"Fees for {swap_type} swaps at https://pro.boltz.exchange: {fees}%",
+                text=f"Fees for {swap_type} {from_currency} -> {to_currency} at https://pro.boltz.exchange: {fees}%",
             )
-            logging.info(f"Notification sent to {chat_id}")
+            logging.debug(f"Notification sent to {chat_id}")
         except Exception as e:
             logging.error(f"Error notifying subscriber {chat_id}: {e}")
 
 
-async def get_fees(api_url: str) -> float:
+async def get_fees(api_url: str) -> dict[str, dict[str, float]]:
     # TODO: reuse session
     async with aiohttp.ClientSession(base_url=api_url) as session:
-        response = await session.get("/v2/swap/submarine")
+        response = await session.get("/v2/swap/submarine", headers={"Referral": "pro"})
         response.raise_for_status()
         data = await response.json()
-        fees = data["BTC"]["BTC"]["fees"]["percentage"]
+
+        fees = {}
+        for quote_currency in data:
+            fees[quote_currency] = {}
+            for base_currency in data[quote_currency]:
+                fees[quote_currency][base_currency] = data[quote_currency][
+                    base_currency
+                ]["fees"]["percentage"]
+
         return fees
 
 
@@ -89,10 +108,23 @@ def main():
         async def monitor_fees(app: Application):
             current = await get_fees(settings.api_url)
             previous = app.bot_data.get("fees", current)
-            if previous != current and current < settings.fee_threshold:
-                async with async_session() as session:
-                    # TODO: other swap types
-                    await notify_subscribers(app.bot,  session, "submarine", current)
+
+            for from_currency, pairs in current.items():
+                for to_currency, fee in pairs.items():
+                    if fee == previous.get(from_currency, {}).get(to_currency, 0):
+                        continue
+
+                    if fee < settings.fee_threshold:
+                        async with async_session() as session:
+                            await notify_subscribers(
+                                app.bot,
+                                session,
+                                SUBMARINE_SWAP_TYPE,
+                                from_currency,
+                                to_currency,
+                                fee,
+                            )
+
             app.bot_data["fees"] = current
 
         application.post_init = post_init
