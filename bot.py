@@ -27,7 +27,7 @@ def db_session(context: ContextTypes.DEFAULT_TYPE) -> AsyncSession:
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "Welcome to the boltz pro fee alert bot! Use /subscribe to receive fee updates."
+        "Welcome to the Boltz Pro fee alert bot! Use /subscribe to receive fee updates."
     )
 
 
