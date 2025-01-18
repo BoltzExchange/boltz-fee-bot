@@ -108,22 +108,22 @@ def main():
         async def monitor_fees(app: Application):
             current = await get_fees(settings.api_url)
             previous = app.bot_data.get("fees", current)
+            if previous:
+                for from_currency, pairs in current.items():
+                    for to_currency, fee in pairs.items():
+                        if fee == previous.get(from_currency, {}).get(to_currency, 0):
+                            continue
 
-            for from_currency, pairs in current.items():
-                for to_currency, fee in pairs.items():
-                    if fee == previous.get(from_currency, {}).get(to_currency, 0):
-                        continue
-
-                    if fee < settings.fee_threshold:
-                        async with async_session() as session:
-                            await notify_subscribers(
-                                app.bot,
-                                session,
-                                SUBMARINE_SWAP_TYPE,
-                                from_currency,
-                                to_currency,
-                                fee,
-                            )
+                        if fee < settings.fee_threshold:
+                            async with async_session() as session:
+                                await notify_subscribers(
+                                    app.bot,
+                                    session,
+                                    SUBMARINE_SWAP_TYPE,
+                                    from_currency,
+                                    to_currency,
+                                    fee,
+                                )
 
             app.bot_data["fees"] = current
 
