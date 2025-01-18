@@ -7,8 +7,16 @@ from telegram import Update, Bot
 from telegram.ext import Application, CommandHandler, ContextTypes
 from settings import Settings
 
-from db import add_subscriber, remove_subscriber, get_subscribers, Base
-from consts import SUBMARINE_SWAP_TYPE
+from db import (
+    add_subscriber,
+    get_previous,
+    remove_subscriber,
+    get_subscribers,
+    Base,
+    upsert_previous,
+)
+from consts import SUBMARINE_SWAP_TYPE, Fees
+from url_params import encode_url_params
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
 
@@ -57,18 +65,20 @@ async def notify_subscribers(
         f"Notifying {len(subscribers)} subscribers about {from_currency} -> {to_currency} {swap_type} fees"
     )
 
+    message = f"Fees for {swap_type} {from_currency} -> {to_currency} at {encode_url_params(swap_type, from_currency, to_currency)}: {fees}%"
+
     for chat_id in subscribers:
         try:
             await bot.send_message(
                 chat_id=chat_id,
-                text=f"Fees for {swap_type} {from_currency} -> {to_currency} at https://pro.boltz.exchange: {fees}%",
+                text=message,
             )
             logging.debug(f"Notification sent to {chat_id}")
         except Exception as e:
             logging.error(f"Error notifying subscriber {chat_id}: {e}")
 
 
-async def get_fees(api_url: str) -> dict[str, dict[str, float]]:
+async def get_fees(api_url: str) -> Fees:
     # TODO: reuse session
     async with aiohttp.ClientSession(base_url=api_url) as session:
         response = await session.get("/v2/swap/submarine", headers={"Referral": "pro"})
@@ -84,6 +94,30 @@ async def get_fees(api_url: str) -> dict[str, dict[str, float]]:
                 ]["fees"]["percentage"]
 
         return fees
+
+
+async def check_fees(
+    session: AsyncSession,
+    bot: Bot,
+    fee_threshold: float,
+    swap_type: str,
+    current: Fees,
+    previous: Fees,
+):
+    for from_currency, pairs in current.items():
+        for to_currency, fee in pairs.items():
+            if fee == previous.get(from_currency, {}).get(to_currency, 0):
+                continue
+
+            if fee < fee_threshold:
+                await notify_subscribers(
+                    bot,
+                    session,
+                    swap_type,
+                    from_currency,
+                    to_currency,
+                    fee,
+                )
 
 
 def main():
@@ -107,25 +141,21 @@ def main():
 
         async def monitor_fees(app: Application):
             current = await get_fees(settings.api_url)
-            previous = app.bot_data.get("fees")
-            if previous:
-                for from_currency, pairs in current.items():
-                    for to_currency, fee in pairs.items():
-                        if fee == previous.get(from_currency, {}).get(to_currency, 0):
-                            continue
 
-                        if fee < settings.fee_threshold:
-                            async with async_session() as session:
-                                await notify_subscribers(
-                                    app.bot,
-                                    session,
-                                    SUBMARINE_SWAP_TYPE,
-                                    from_currency,
-                                    to_currency,
-                                    fee,
-                                )
+            async with async_session() as session:
+                previous = await get_previous(session, SUBMARINE_SWAP_TYPE)
 
-            app.bot_data["fees"] = current
+                if previous:
+                    await check_fees(
+                        session,
+                        app.bot,
+                        settings.fee_threshold,
+                        SUBMARINE_SWAP_TYPE,
+                        current,
+                        previous,
+                    )
+
+                await upsert_previous(session, SUBMARINE_SWAP_TYPE, current)
 
         application.post_init = post_init
         application.job_queue.run_repeating(

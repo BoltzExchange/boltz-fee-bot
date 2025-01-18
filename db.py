@@ -1,7 +1,9 @@
-from sqlalchemy import Column, Integer
+from sqlalchemy import Column, Integer, Text, JSON
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.ext.declarative import declarative_base
+
+from consts import Fees
 
 Base = declarative_base()
 
@@ -33,3 +35,27 @@ async def remove_subscriber(session: AsyncSession, chat_id: int) -> bool:
 async def get_subscribers(session: AsyncSession) -> list[int]:
     result = (await session.execute(select(Subscriber))).scalars().all()
     return [subscriber.chat_id for subscriber in result]
+
+
+class Previous(Base):
+    __tablename__ = "previous"
+    key = Column(Text, primary_key=True)
+    value = Column(JSON)
+
+
+async def upsert_previous(session: AsyncSession, key: str, value: Fees) -> None:
+    previous = await session.get(Previous, key)
+    if previous:
+        previous.value = value
+    else:
+        previous = Previous(key=key, value=value)
+        session.add(previous)
+
+    await session.commit()
+
+
+async def get_previous(session: AsyncSession, key: str) -> Fees | None:
+    result = await session.get(Previous, key)
+    if not result:
+        return None
+    return result.value  # type: ignore
