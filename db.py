@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Text, JSON
+from sqlalchemy import Column, Text, JSON, BigInteger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.ext.declarative import declarative_base
@@ -10,7 +10,7 @@ Base = declarative_base()
 
 class Subscriber(Base):
     __tablename__ = "subscribers"
-    chat_id = Column(Integer, primary_key=True, unique=True)
+    chat_id = Column(BigInteger, primary_key=True, unique=True)
 
 
 async def add_subscriber(session: AsyncSession, chat_id: int) -> bool:
