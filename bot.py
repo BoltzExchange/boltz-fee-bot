@@ -59,13 +59,19 @@ async def notify_subscribers(
     from_currency: str,
     to_currency: str,
     fees: float,
+    threshold: float,
 ):
     subscribers = await get_subscribers(session)
     logging.info(
         f"Notifying {len(subscribers)} subscribers about {from_currency} -> {to_currency} {swap_type} fees"
     )
 
-    message = f"Fees for {swap_type} {from_currency} -> {to_currency} at {encode_url_params(swap_type, from_currency, to_currency)}: {fees}%"
+    threshold_msg = (
+        f"just went below {threshold}%"
+        if fees < threshold
+        else f"above {threshold}% again"
+    )
+    message = f"Fees for {swap_type} {from_currency} -> {to_currency} at {encode_url_params(swap_type, from_currency, to_currency)} {threshold_msg}"
 
     for chat_id in subscribers:
         try:
@@ -106,10 +112,10 @@ async def check_fees(
 ):
     for from_currency, pairs in current.items():
         for to_currency, fee in pairs.items():
-            if fee == previous.get(from_currency, {}).get(to_currency, 0):
-                continue
-
-            if fee < fee_threshold:
+            previous_fee = previous.get(from_currency, {}).get(to_currency, 0)
+            below = fee < fee_threshold and previous_fee > fee_threshold
+            above = fee > fee_threshold and previous_fee < fee_threshold
+            if below or above:
                 await notify_subscribers(
                     bot,
                     session,
@@ -117,6 +123,7 @@ async def check_fees(
                     from_currency,
                     to_currency,
                     fee,
+                    fee_threshold,
                 )
 
 
