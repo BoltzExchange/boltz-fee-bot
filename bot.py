@@ -67,11 +67,11 @@ async def notify_subscribers(
     )
 
     threshold_msg = (
-        f"just went below {threshold}%"
+        f"went below {threshold}%"
         if fees < threshold
-        else f"above {threshold}% again"
+        else f"are above {threshold}% again"
     )
-    message = f"Fees for {swap_type} {from_currency} -> {to_currency} at {encode_url_params(swap_type, from_currency, to_currency)} {threshold_msg}"
+    message = f"Fees for {swap_type} {from_currency} -> {to_currency} {threshold_msg}: {encode_url_params(swap_type, from_currency, to_currency)}"
 
     for chat_id in subscribers:
         try:
