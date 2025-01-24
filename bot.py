@@ -19,6 +19,8 @@ from consts import SUBMARINE_SWAP_TYPE, Fees
 from url_params import encode_url_params
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
+logging.getLogger("apscheduler").setLevel(logging.WARN)
+logging.getLogger("httpx").setLevel(logging.WARN)
 
 
 def db_session(context: ContextTypes.DEFAULT_TYPE) -> AsyncSession:
