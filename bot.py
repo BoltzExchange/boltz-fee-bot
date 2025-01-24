@@ -1,6 +1,5 @@
 import logging
 
-import aiohttp
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from telegram import Update, Bot
@@ -17,6 +16,7 @@ from db import (
 )
 from consts import SUBMARINE_SWAP_TYPE, Fees
 from url_params import encode_url_params
+from httpx import AsyncClient
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
 
@@ -86,10 +86,10 @@ async def notify_subscribers(
 
 async def get_fees(api_url: str) -> Fees:
     # TODO: reuse session
-    async with aiohttp.ClientSession(base_url=api_url) as session:
-        response = await session.get("/v2/swap/submarine", headers={"Referral": "pro"})
+    async with AsyncClient(base_url=api_url) as client:
+        response = await client.get("/v2/swap/submarine", headers={"Referral": "pro"})
         response.raise_for_status()
-        data = await response.json()
+        data = response.json()
 
         fees = {}
         for quote_currency in data:
