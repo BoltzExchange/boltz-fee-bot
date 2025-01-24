@@ -86,22 +86,20 @@ async def notify_subscribers(
             logging.error(f"Error notifying subscriber {chat_id}: {e}")
 
 
-async def get_fees(api_url: str) -> Fees:
-    # TODO: reuse session
-    async with AsyncClient(base_url=api_url) as client:
-        response = await client.get("/v2/swap/submarine", headers={"Referral": "pro"})
-        response.raise_for_status()
-        data = response.json()
+async def get_fees(client: AsyncClient) -> Fees:
+    response = await client.get("/v2/swap/submarine", headers={"Referral": "pro"})
+    response.raise_for_status()
+    data = response.json()
 
-        fees = {}
-        for quote_currency in data:
-            fees[quote_currency] = {}
-            for base_currency in data[quote_currency]:
-                fees[quote_currency][base_currency] = data[quote_currency][
-                    base_currency
-                ]["fees"]["percentage"]
+    fees = {}
+    for quote_currency in data:
+        fees[quote_currency] = {}
+        for base_currency in data[quote_currency]:
+            fees[quote_currency][base_currency] = data[quote_currency][base_currency][
+                "fees"
+            ]["percentage"]
 
-        return fees
+    return fees
 
 
 async def check_fees(
@@ -144,12 +142,17 @@ def main():
         application.add_handler(CommandHandler("subscribe", subscribe))
         application.add_handler(CommandHandler("unsubscribe", unsubscribe))
 
+        client = AsyncClient(base_url=settings.api_url)
+
         async def post_init(app: Application):
             async with engine.begin() as conn:
                 await conn.run_sync(Base.metadata.create_all)
 
+        async def post_shutdown(app: Application):
+            await client.aclose()
+
         async def monitor_fees(app: Application):
-            current = await get_fees(settings.api_url)
+            current = await get_fees(client)
 
             async with async_session() as session:
                 previous = await get_previous(session, SUBMARINE_SWAP_TYPE)
@@ -167,6 +170,7 @@ def main():
                 await upsert_previous(session, SUBMARINE_SWAP_TYPE, current)
 
         application.post_init = post_init
+        application.post_shutdown = post_shutdown
         application.job_queue.run_repeating(
             monitor_fees, interval=settings.check_interval, first=0
         )
