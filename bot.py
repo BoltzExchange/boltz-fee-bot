@@ -113,8 +113,8 @@ async def check_fees(
     for from_currency, pairs in current.items():
         for to_currency, fee in pairs.items():
             previous_fee = previous.get(from_currency, {}).get(to_currency, 0)
-            below = fee < fee_threshold and previous_fee > fee_threshold
-            above = fee > fee_threshold and previous_fee < fee_threshold
+            below = fee < fee_threshold and previous_fee >= fee_threshold
+            above = fee > fee_threshold and previous_fee <= fee_threshold
             if below or above:
                 await notify_subscribers(
                     bot,
