@@ -1,130 +1,83 @@
 import logging
 
+from httpx import AsyncClient
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from telegram import Update, Bot
-from telegram.ext import Application, CommandHandler, ContextTypes
-from settings import Settings
+from telegram import Bot
+from telegram.ext import Application
 
+from api import get_all_fees
+from commands.mysubscriptions import mysubscriptions_handler
+from commands.start import start_handler
+from commands.unsubscribe import unsubscribe_handler
+from consts import Fees, ALL_FEES
 from db import (
-    add_subscriber,
     get_previous,
-    remove_subscriber,
     get_subscribers,
     Base,
     upsert_previous,
+    Subscriber,
 )
-from consts import SUBMARINE_SWAP_TYPE, Fees
-from url_params import encode_url_params
-from httpx import AsyncClient
+from settings import Settings
+from commands.subscribe import subscribe_handler
+from utils import encode_url_params
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
 logging.getLogger("apscheduler").setLevel(logging.WARN)
 logging.getLogger("httpx").setLevel(logging.WARN)
 
 
-def db_session(context: ContextTypes.DEFAULT_TYPE) -> AsyncSession:
-    return context.bot_data["session_maker"]()
+def get_fee(fees: Fees, subscriber: Subscriber) -> float | None:
+    return fees.get(subscriber.from_asset, {}).get(subscriber.to_asset, None)
 
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "Welcome to the Boltz Pro fee alert bot! Use /subscribe to receive fee updates."
-    )
-
-
-async def subscribe(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    async with db_session(context) as session:
-        chat_id = update.message.chat_id
-        if await add_subscriber(session, chat_id):
-            await update.message.reply_text("You have subscribed to fee alerts!")
-            logging.info(f"New subscriber added: {chat_id}")
-        else:
-            await update.message.reply_text("You are already subscribed!")
-
-
-async def unsubscribe(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    async with db_session(context) as session:
-        chat_id = update.message.chat_id
-
-        if await remove_subscriber(session, chat_id):
-            await update.message.reply_text("You have unsubscribed from fee alerts.")
-            logging.info(f"Subscriber removed: {chat_id}")
-        else:
-            await update.message.reply_text("You are not subscribed.")
-
-
-async def notify_subscribers(
+async def notify_subscriber(
     bot: Bot,
-    session: AsyncSession,
-    swap_type: str,
-    from_currency: str,
-    to_currency: str,
-    fees: float,
-    threshold: float,
+    subscriber: Subscriber,
+    fees: Fees,
 ):
-    subscribers = await get_subscribers(session)
-    logging.info(
-        f"Notifying {len(subscribers)} subscribers about {from_currency} -> {to_currency} {swap_type} fees"
-    )
+    from_asset = subscriber.from_asset
+    to_asset = subscriber.to_asset
 
+    url = encode_url_params(from_asset, to_asset)
     threshold_msg = (
-        f"went below {threshold}%"
-        if fees < threshold
-        else f"are above {threshold}% again"
+        f"went below {subscriber.fee_threshold}%"
+        if get_fee(fees, subscriber) < subscriber.fee_threshold
+        else f"are above {subscriber.fee_threshold}% again"
     )
-    message = f"Fees for {swap_type} {from_currency} -> {to_currency} {threshold_msg}: {encode_url_params(swap_type, from_currency, to_currency)}"
-
-    for chat_id in subscribers:
-        try:
-            await bot.send_message(
-                chat_id=chat_id,
-                text=message,
-            )
-            logging.debug(f"Notification sent to {chat_id}")
-        except Exception as e:
-            logging.error(f"Error notifying subscriber {chat_id}: {e}")
+    message = f"Fees for {from_asset} -> {to_asset} {threshold_msg}: {url}"
+    try:
+        await bot.send_message(
+            chat_id=subscriber.chat_id,
+            text=message,
+        )
+        logging.debug(f"Notification sent to {subscriber.chat_id}")
+    except Exception as e:
+        logging.error(f"Error notifying subscriber {subscriber.chat_id}: {e}")
 
 
-async def get_fees(client: AsyncClient) -> Fees:
-    response = await client.get("/v2/swap/submarine", headers={"Referral": "pro"})
-    response.raise_for_status()
-    data = response.json()
-
-    fees = {}
-    for quote_currency in data:
-        fees[quote_currency] = {}
-        for base_currency in data[quote_currency]:
-            fees[quote_currency][base_currency] = data[quote_currency][base_currency][
-                "fees"
-            ]["percentage"]
-
-    return fees
+def check_subscriber(current: Fees, previous: Fees, subscriber: Subscriber) -> bool:
+    fee = get_fee(current, subscriber)
+    previous_fee = get_fee(previous, subscriber)
+    if fee is None or previous_fee is None:
+        return False
+    fee_threshold = subscriber.fee_threshold
+    below = fee < fee_threshold and previous_fee >= fee_threshold
+    above = fee > fee_threshold and previous_fee <= fee_threshold
+    return below or above
 
 
-async def check_fees(
-    session: AsyncSession,
-    bot: Bot,
-    fee_threshold: float,
-    swap_type: str,
-    current: Fees,
-    previous: Fees,
-):
-    for from_currency, pairs in current.items():
-        for to_currency, fee in pairs.items():
-            previous_fee = previous.get(from_currency, {}).get(to_currency, 0)
-            below = fee < fee_threshold and previous_fee >= fee_threshold
-            above = fee > fee_threshold and previous_fee <= fee_threshold
-            if below or above:
-                await notify_subscribers(
-                    bot,
-                    session,
-                    swap_type,
-                    from_currency,
-                    to_currency,
-                    fee,
-                    fee_threshold,
-                )
+async def check_fees(session: AsyncSession, current: Fees) -> list[Subscriber]:
+    previous = await get_previous(session, ALL_FEES)
+    result = []
+    if previous:
+        result = [
+            subscriber
+            for subscriber in await get_subscribers(session)
+            if check_subscriber(current, previous, subscriber)
+        ]
+    await upsert_previous(session, ALL_FEES, current)
+    return result
 
 
 def main():
@@ -138,9 +91,10 @@ def main():
         application.bot_data["settings"] = settings
         application.bot_data["session_maker"] = async_session
 
-        application.add_handler(CommandHandler("start", start))
-        application.add_handler(CommandHandler("subscribe", subscribe))
-        application.add_handler(CommandHandler("unsubscribe", unsubscribe))
+        application.add_handler(start_handler)
+        application.add_handler(mysubscriptions_handler)
+        application.add_handler(subscribe_handler)
+        application.add_handler(unsubscribe_handler)
 
         client = AsyncClient(base_url=settings.api_url)
 
@@ -148,31 +102,26 @@ def main():
             async with engine.begin() as conn:
                 await conn.run_sync(Base.metadata.create_all)
 
+            await monitor_fees(app)
+
         async def post_shutdown(app: Application):
             await client.aclose()
 
         async def monitor_fees(app: Application):
-            current = await get_fees(client)
-
+            current = await get_all_fees(client)
             async with async_session() as session:
-                previous = await get_previous(session, SUBMARINE_SWAP_TYPE)
-
-                if previous:
-                    await check_fees(
-                        session,
-                        app.bot,
-                        settings.fee_threshold,
-                        SUBMARINE_SWAP_TYPE,
-                        current,
-                        previous,
-                    )
-
-                await upsert_previous(session, SUBMARINE_SWAP_TYPE, current)
+                notifications = await check_fees(session, current)
+            if len(notifications) > 0:
+                logging.info(
+                    f"Sending notifications to {len(notifications)} subscribers"
+                )
+                for subscriber in notifications:
+                    await notify_subscriber(app.bot, subscriber, current)
 
         application.post_init = post_init
         application.post_shutdown = post_shutdown
         application.job_queue.run_repeating(
-            monitor_fees, interval=settings.check_interval, first=0
+            monitor_fees, interval=settings.check_interval
         )
         application.run_polling()
 
