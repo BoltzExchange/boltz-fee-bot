@@ -13,10 +13,10 @@ from commands.unsubscribe import unsubscribe_handler
 from consts import Fees, ALL_FEES
 from db import (
     get_previous,
-    get_subscribers,
     Base,
     upsert_previous,
-    Subscriber,
+    Subscription,
+    get_subscriptions,
 )
 from settings import Settings
 from commands.subscribe import subscribe_handler
@@ -27,54 +27,56 @@ logging.getLogger("apscheduler").setLevel(logging.WARN)
 logging.getLogger("httpx").setLevel(logging.WARN)
 
 
-def get_fee(fees: Fees, subscriber: Subscriber) -> float | None:
-    return fees.get(subscriber.from_asset, {}).get(subscriber.to_asset, None)
+def get_fee(fees: Fees, subscription: Subscription) -> float | None:
+    return fees.get(subscription.from_asset, {}).get(subscription.to_asset, None)
 
 
-async def notify_subscriber(
+async def notify_subscription(
     bot: Bot,
-    subscriber: Subscriber,
+    subscription: Subscription,
     fees: Fees,
 ):
-    from_asset = subscriber.from_asset
-    to_asset = subscriber.to_asset
+    from_asset = subscription.from_asset
+    to_asset = subscription.to_asset
 
     url = encode_url_params(from_asset, to_asset)
     threshold_msg = (
-        f"went below {subscriber.fee_threshold}%"
-        if get_fee(fees, subscriber) < subscriber.fee_threshold
-        else f"are above {subscriber.fee_threshold}% again"
+        f"went below {subscription.fee_threshold}%"
+        if get_fee(fees, subscription) < subscription.fee_threshold
+        else f"are above {subscription.fee_threshold}% again"
     )
     message = f"Fees for {from_asset} -> {to_asset} {threshold_msg}: {url}"
     try:
         await bot.send_message(
-            chat_id=subscriber.chat_id,
+            chat_id=subscription.chat_id,
             text=message,
         )
-        logging.debug(f"Notification sent to {subscriber.chat_id}")
+        logging.debug(f"Notification sent to {subscription.chat_id}")
     except Exception as e:
-        logging.error(f"Error notifying subscriber {subscriber.chat_id}: {e}")
+        logging.error(f"Error notifying subscription {subscription.chat_id}: {e}")
 
 
-def check_subscriber(current: Fees, previous: Fees, subscriber: Subscriber) -> bool:
-    fee = get_fee(current, subscriber)
-    previous_fee = get_fee(previous, subscriber)
+def check_subscription(
+    current: Fees, previous: Fees, subscription: Subscription
+) -> bool:
+    fee = get_fee(current, subscription)
+    previous_fee = get_fee(previous, subscription)
     if fee is None or previous_fee is None:
         return False
-    fee_threshold = subscriber.fee_threshold
+    fee_threshold = subscription.fee_threshold
     below = fee < fee_threshold and previous_fee >= fee_threshold
     above = fee > fee_threshold and previous_fee <= fee_threshold
     return below or above
 
 
-async def check_fees(session: AsyncSession, current: Fees) -> list[Subscriber]:
+async def check_fees(session: AsyncSession, current: Fees) -> list[Subscription]:
     previous = await get_previous(session, ALL_FEES)
     result = []
     if previous:
         result = [
-            subscriber
-            for subscriber in await get_subscribers(session)
-            if check_subscriber(current, previous, subscriber)
+            subscription
+            for subscription in await get_subscriptions(session)
+            if check_subscription(current, previous, subscription)
         ]
     await upsert_previous(session, ALL_FEES, current)
     return result
@@ -113,10 +115,10 @@ def main():
                 notifications = await check_fees(session, current)
             if len(notifications) > 0:
                 logging.info(
-                    f"Sending notifications to {len(notifications)} subscribers"
+                    f"Sending notifications to {len(notifications)} subscriptions"
                 )
-                for subscriber in notifications:
-                    await notify_subscriber(app.bot, subscriber, current)
+                for subscription in notifications:
+                    await notify_subscription(app.bot, subscription, current)
 
         application.post_init = post_init
         application.post_shutdown = post_shutdown

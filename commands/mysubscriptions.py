@@ -19,7 +19,7 @@ from db import (
     db_session,
     get_subscriptions,
     get_subscription,
-    remove_subscriber,
+    remove_subscription,
 )
 
 SELECT, ACTION, UPDATE_THRESHOLD = range(3)
@@ -78,14 +78,14 @@ async def selected_subscription(
     session: AsyncSession, update: Update, context: ContextTypes.DEFAULT_TYPE
 ):
     from_asset, to_asset = context.chat_data["selection"].split("_")
-    subscriber = await get_subscription(
+    subscription = await get_subscription(
         session, update.effective_chat.id, from_asset, to_asset
     )
-    if not subscriber:
+    if not subscription:
         await update.effective_chat.send_message(
             "Could not get subscription. Try /mysubscriptions again."
         )
-    return subscriber
+    return subscription
 
 
 async def action(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -97,9 +97,9 @@ async def action(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return UPDATE_THRESHOLD
     elif query.data == "remove":
         async with db_session(context) as session:
-            subscriber = await selected_subscription(session, update, context)
-            if subscriber:
-                await remove_subscriber(session, subscriber)
+            subscription = await selected_subscription(session, update, context)
+            if subscription:
+                await remove_subscription(session, subscription)
                 await query.message.chat.send_message("Subscription removed.")
 
         return ConversationHandler.END
@@ -109,9 +109,9 @@ async def action(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def update_threshold(update: Update, context: ContextTypes.DEFAULT_TYPE):
     async with db_session(context) as session:
-        subscriber = await selected_subscription(session, update, context)
-        if subscriber:
-            subscriber.fee_threshold = Decimal(update.message.text)
+        subscription = await selected_subscription(session, update, context)
+        if subscription:
+            subscription.fee_threshold = Decimal(update.message.text)
             await session.commit()
             await update.message.reply_text("Threshold updated.")
 

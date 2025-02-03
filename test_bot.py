@@ -1,6 +1,6 @@
 import pytest
-from bot import check_subscriber
-from db import Subscriber
+from bot import check_subscription
+from db import Subscription
 
 
 @pytest.mark.parametrize(
@@ -71,7 +71,7 @@ from db import Subscriber
         ),
     ],
 )
-def test_check_subscriber(
+def test_check_subscription(
     current_fees,
     previous_fees,
     from_asset,
@@ -80,9 +80,9 @@ def test_check_subscriber(
     expected,
     test_description,
 ):
-    subscriber = Subscriber(
+    subscription = Subscription(
         chat_id=123, from_asset=from_asset, to_asset=to_asset, fee_threshold=threshold
     )
 
-    result = check_subscriber(current_fees, previous_fees, subscriber)
+    result = check_subscription(current_fees, previous_fees, subscription)
     assert result == expected, f"Failed case: {test_description}"

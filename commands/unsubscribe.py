@@ -17,7 +17,7 @@ async def unsubscribe(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(
                 "You have unsubscribed from all fee alerts."
             )
-            logging.info(f"Subscriber removed: {chat_id}")
+            logging.info(f"Subscription removed: {chat_id}")
         else:
             await update.message.reply_text("You are not subscribed.")
 

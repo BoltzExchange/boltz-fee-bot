@@ -10,21 +10,21 @@ from consts import Fees
 Base = declarative_base()
 
 
-class Subscriber(Base):
-    __tablename__ = "subscribers"
+class Subscription(Base):
+    __tablename__ = "subscriptions"
     chat_id = Column(BigInteger, primary_key=True)
     from_asset = Column(Text, primary_key=True)
     to_asset = Column(Text, primary_key=True)
-    fee_threshold: float = Column(DECIMAL)
+    fee_threshold: float = Column(DECIMAL, nullable=False)
 
 
 def db_session(context: ContextTypes.DEFAULT_TYPE) -> AsyncSession:
     return context.bot_data["session_maker"]()
 
 
-async def add_subscriber(session: AsyncSession, subscriber: Subscriber) -> bool:
+async def add_subscription(session: AsyncSession, subscription: Subscription) -> bool:
     try:
-        session.add(subscriber)
+        session.add(subscription)
         await session.commit()
     except IntegrityError:
         return False
@@ -32,37 +32,29 @@ async def add_subscriber(session: AsyncSession, subscriber: Subscriber) -> bool:
 
 
 async def remove_all_subscriptions(session: AsyncSession, chat_id: int) -> bool:
-    statement = delete(Subscriber).where(Subscriber.chat_id == chat_id)
+    statement = delete(Subscription).where(Subscription.chat_id == chat_id)
     await session.execute(statement)
     await session.commit()
     return True
 
 
-async def remove_subscriber(session: AsyncSession, subscriber: Subscriber):
-    await session.delete(subscriber)
+async def remove_subscription(session: AsyncSession, subscription: Subscription):
+    await session.delete(subscription)
     await session.commit()
-
-
-# async def get_subscriber(
-#        session: AsyncSession, from_asset: str, to_asset: str
-# ) -> Subscriber:
-
-
-async def get_subscriptions(
-    session: AsyncSession, chat_id: int
-) -> list[Subscriber] | None:
-    query = select(Subscriber).where(Subscriber.chat_id == chat_id)
-    return (await session.execute(query)).scalars().all()
 
 
 async def get_subscription(
     session: AsyncSession, chat_id: int, from_asset: str, to_asset: str
-) -> Subscriber | None:
-    return await session.get(Subscriber, (chat_id, from_asset, to_asset))
+) -> Subscription | None:
+    return await session.get(Subscription, (chat_id, from_asset, to_asset))
 
 
-async def get_subscribers(session: AsyncSession) -> list[Subscriber]:
-    query = select(Subscriber)
+async def get_subscriptions(
+    session: AsyncSession, chat_id: int = None
+) -> list[Subscription]:
+    query = select(Subscription)
+    if chat_id:
+        query = query.where(Subscription.chat_id == chat_id)
     return (await session.execute(query)).scalars().all()
 
 

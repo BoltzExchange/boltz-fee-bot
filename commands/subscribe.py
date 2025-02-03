@@ -18,8 +18,8 @@ from telegram.ext import (
 
 from consts import Fees, ALL_FEES
 from db import (
-    add_subscriber,
-    Subscriber,
+    add_subscription,
+    Subscription,
     db_session,
     get_subscriptions,
     get_previous,
@@ -33,7 +33,7 @@ def inline_keyboard(assets: Iterable[str]):
     return InlineKeyboardMarkup(rows)
 
 
-def filter_fees(fees: Fees, subscriptions: list[Subscriber]) -> Fees:
+def filter_fees(fees: Fees, subscriptions: list[Subscription]) -> Fees:
     for subscription in subscriptions:
         fees[subscription.from_asset].pop(subscription.to_asset, None)
         if len(fees[subscription.from_asset]) == 0:
@@ -89,17 +89,17 @@ async def save_threshold(
 ):
     chat = update.effective_chat
     async with db_session(context) as session:
-        subscriber = Subscriber(
+        subscription = Subscription(
             chat_id=chat.id,
             fee_threshold=Decimal(fee_threshold.strip("%")),
             from_asset=context.chat_data["from_asset"],
             to_asset=context.chat_data["to_asset"],
         )
-        if await add_subscriber(session, subscriber):
+        if await add_subscription(session, subscription):
             await chat.send_message(
                 "You have subscribed to fee alerts!",
             )
-            logging.info(f"New subscriber added: {chat.id}")
+            logging.info(f"New subscription added: {chat.id}")
         else:
             await chat.send_message("You are already subscribed!")
 
