@@ -13,7 +13,6 @@ from commands.unsubscribe import unsubscribe_handler
 from consts import Fees, ALL_FEES
 from db import (
     get_previous,
-    Base,
     upsert_previous,
     Subscription,
     get_subscriptions,
@@ -101,9 +100,6 @@ def main():
         client = AsyncClient(base_url=settings.api_url)
 
         async def post_init(app: Application):
-            async with engine.begin() as conn:
-                await conn.run_sync(Base.metadata.create_all)
-
             await monitor_fees(app)
 
         async def post_shutdown(app: Application):
