@@ -1,3 +1,4 @@
+import decimal
 import logging
 from decimal import Decimal
 from typing import Iterable
@@ -89,12 +90,17 @@ async def save_threshold(
 ):
     chat = update.effective_chat
     async with db_session(context) as session:
-        subscription = Subscription(
-            chat_id=chat.id,
-            fee_threshold=Decimal(fee_threshold.strip("%")),
-            from_asset=context.chat_data["from_asset"],
-            to_asset=context.chat_data["to_asset"],
-        )
+        try:
+            subscription = Subscription(
+                chat_id=chat.id,
+                fee_threshold=Decimal(fee_threshold.strip("%")),
+                from_asset=context.chat_data["from_asset"],
+                to_asset=context.chat_data["to_asset"],
+            )
+        except decimal.InvalidOperation:
+            await chat.send_message("Invalid threshold value. Please try again.")
+            return
+
         if await add_subscription(session, subscription):
             await chat.send_message(
                 "You have subscribed to fee alerts!",
@@ -120,11 +126,6 @@ async def threshold(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
 async def custom_threshold(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await save_threshold(update, context, update.message.text)
-
-    # TODO: show summary of subscription
-    await update.message.reply_text(
-        "You have subscribed to fee alerts!",
-    )
 
     return ConversationHandler.END
 

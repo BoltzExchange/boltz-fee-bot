@@ -15,7 +15,7 @@ class Subscription(Base):
     chat_id = Column(BigInteger, primary_key=True)
     from_asset = Column(Text, primary_key=True)
     to_asset = Column(Text, primary_key=True)
-    fee_threshold: float = Column(DECIMAL, nullable=False)
+    fee_threshold = Column(DECIMAL, nullable=False)
 
 
 def db_session(context: ContextTypes.DEFAULT_TYPE) -> AsyncSession:

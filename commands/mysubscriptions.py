@@ -1,3 +1,4 @@
+import decimal
 from decimal import Decimal
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -111,7 +112,11 @@ async def update_threshold(update: Update, context: ContextTypes.DEFAULT_TYPE):
     async with db_session(context) as session:
         subscription = await selected_subscription(session, update, context)
         if subscription:
-            subscription.fee_threshold = Decimal(update.message.text)
+            try:
+                subscription.fee_threshold = Decimal(update.message.text)
+            except decimal.InvalidOperation:
+                await update.message.reply_text("Invalid threshold. Try again.")
+                return UPDATE_THRESHOLD
             await session.commit()
             await update.message.reply_text("Threshold updated.")
 
