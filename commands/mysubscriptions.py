@@ -37,7 +37,7 @@ async def list_subscriptions(update: Update, context: ContextTypes.DEFAULT_TYPE)
                     [
                         InlineKeyboardButton(
                             f"{sub.from_asset} -> {sub.to_asset} at {sub.fee_threshold}%",
-                            callback_data=f"{sub.from_asset}_{sub.to_asset}",
+                            callback_data=sub.id,
                         )
                     ]
                     for sub in subscriptions
@@ -78,10 +78,7 @@ async def select(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def selected_subscription(
     session: AsyncSession, update: Update, context: ContextTypes.DEFAULT_TYPE
 ):
-    from_asset, to_asset = context.chat_data["selection"].split("_")
-    subscription = await get_subscription(
-        session, update.effective_chat.id, from_asset, to_asset
-    )
+    subscription = await get_subscription(session, int(context.chat_data["selection"]))
     if not subscription:
         await update.effective_chat.send_message(
             "Could not get subscription. Try /mysubscriptions again."

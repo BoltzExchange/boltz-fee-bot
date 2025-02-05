@@ -21,6 +21,12 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     op.rename_table("subscribers", "subscriptions")
 
+    op.drop_constraint("subscribers_pkey", "subscriptions", type_="primary")
+    op.add_column(
+        "subscriptions",
+        sa.Column("id", sa.BigInteger(), primary_key=True, autoincrement=True),
+    )
+
     op.add_column(
         "subscriptions",
         sa.Column("fee_threshold", sa.DECIMAL(), nullable=False, server_default="0.0"),
@@ -36,11 +42,6 @@ def upgrade() -> None:
     op.alter_column("subscriptions", "fee_threshold", server_default=None)
     op.alter_column("subscriptions", "from_asset", server_default=None)
     op.alter_column("subscriptions", "to_asset", server_default=None)
-
-    op.drop_constraint("subscribers_pkey", "subscriptions", type_="primary")
-    op.create_primary_key(
-        "subscriptions_pkey", "subscriptions", ["chat_id", "from_asset", "to_asset"]
-    )
 
     # the sequence is still here because chat_id was the initial primary_key
     op.alter_column("subscriptions", "chat_id", server_default=None)

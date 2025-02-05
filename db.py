@@ -12,9 +12,10 @@ Base = declarative_base()
 
 class Subscription(Base):
     __tablename__ = "subscriptions"
-    chat_id = Column(BigInteger, primary_key=True)
-    from_asset = Column(Text, primary_key=True)
-    to_asset = Column(Text, primary_key=True)
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    chat_id = Column(BigInteger, nullable=False)
+    from_asset = Column(Text, nullable=False)
+    to_asset = Column(Text, nullable=False)
     fee_threshold = Column(DECIMAL, nullable=False)
 
 
@@ -44,9 +45,9 @@ async def remove_subscription(session: AsyncSession, subscription: Subscription)
 
 
 async def get_subscription(
-    session: AsyncSession, chat_id: int, from_asset: str, to_asset: str
+    session: AsyncSession, subscription_id: int
 ) -> Subscription | None:
-    return await session.get(Subscription, (chat_id, from_asset, to_asset))
+    return await session.get(Subscription, subscription_id)
 
 
 async def get_subscriptions(
