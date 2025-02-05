@@ -75,7 +75,7 @@ async def to_asset(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             [
                 [
                     InlineKeyboardButton(f"{value}%", callback_data=value)
-                    for value in (0, -0.1, -0.2)
+                    for value in (0.05, -0.1, -0.15)
                 ],
                 [InlineKeyboardButton("Custom", callback_data="custom")],
             ]
