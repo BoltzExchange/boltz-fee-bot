@@ -1,4 +1,5 @@
 import decimal
+import logging
 from decimal import Decimal
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -34,12 +35,7 @@ async def list_subscriptions(update: Update, context: ContextTypes.DEFAULT_TYPE)
         if subscriptions:
             keyboard = InlineKeyboardMarkup(
                 [
-                    [
-                        InlineKeyboardButton(
-                            f"{sub.from_asset} -> {sub.to_asset} at {sub.fee_threshold}%",
-                            callback_data=sub.id,
-                        )
-                    ]
+                    [InlineKeyboardButton(sub.pretty_string(), callback_data=sub.id)]
                     for sub in subscriptions
                 ]
             )
@@ -99,6 +95,7 @@ async def action(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if subscription:
                 await remove_subscription(session, subscription)
                 await query.message.chat.send_message("Subscription removed.")
+                logging.info(f"Removed: {subscription}")
 
         return ConversationHandler.END
 

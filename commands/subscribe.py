@@ -104,9 +104,9 @@ async def save_threshold(
 
         if await add_subscription(session, subscription):
             await chat.send_message(
-                "You have subscribed to fee alerts!",
+                f"You have subscribed to fee alerts for {subscription.pretty_string()}!",
             )
-            logging.info(f"New subscription added: {chat.id}")
+            logging.info(f"Added: {subscription}")
         else:
             await chat.send_message("You are already subscribed!")
 
