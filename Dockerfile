@@ -18,7 +18,9 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 FROM python:$PYTHON_VERSION-slim-bookworm
 
+WORKDIR /app
+
 COPY --from=builder --chown=app:app /app /app
 
 ENV PATH="/app/.venv/bin:$PATH"
-CMD ["python", "/app/bot.py"]
+CMD ["sh", "-c", "alembic upgrade head && python bot.py"]

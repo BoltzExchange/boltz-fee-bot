@@ -1,40 +1,68 @@
-from sqlalchemy import Column, Text, JSON, BigInteger
+from sqlalchemy import Column, Text, JSON, BigInteger, delete, DECIMAL
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.ext.declarative import declarative_base
+from telegram.ext import ContextTypes
 
 from consts import Fees
 
 Base = declarative_base()
 
 
-class Subscriber(Base):
-    __tablename__ = "subscribers"
-    chat_id = Column(BigInteger, primary_key=True, unique=True)
+class Subscription(Base):
+    __tablename__ = "subscriptions"
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    chat_id = Column(BigInteger, nullable=False)
+    from_asset = Column(Text, nullable=False)
+    to_asset = Column(Text, nullable=False)
+    fee_threshold = Column(DECIMAL, nullable=False)
+
+    def __str__(self):
+        return f"Subscription(chat_id={self.chat_id}, from_asset={self.from_asset}, to_asset={self.to_asset}, fee_threshold={self.fee_threshold})"
+
+    def pretty_string(self):
+        return f"{self.from_asset} -> {self.to_asset} below {self.fee_threshold}%"
 
 
-async def add_subscriber(session: AsyncSession, chat_id: int) -> bool:
-    result = await session.get(Subscriber, chat_id)
-    if result:
+def db_session(context: ContextTypes.DEFAULT_TYPE) -> AsyncSession:
+    return context.bot_data["session_maker"]()
+
+
+async def add_subscription(session: AsyncSession, subscription: Subscription) -> bool:
+    try:
+        session.add(subscription)
+        await session.commit()
+    except IntegrityError:
         return False
-    subscriber = Subscriber(chat_id=chat_id)
-    session.add(subscriber)
+    return True
+
+
+async def remove_all_subscriptions(session: AsyncSession, chat_id: int) -> bool:
+    statement = delete(Subscription).where(Subscription.chat_id == chat_id)
+    await session.execute(statement)
     await session.commit()
     return True
 
 
-async def remove_subscriber(session: AsyncSession, chat_id: int) -> bool:
-    subscriber = await session.get(Subscriber, chat_id)
-    if not subscriber:
-        return False
-    await session.delete(subscriber)
+async def remove_subscription(session: AsyncSession, subscription: Subscription):
+    await session.delete(subscription)
     await session.commit()
-    return True
 
 
-async def get_subscribers(session: AsyncSession) -> list[int]:
-    result = (await session.execute(select(Subscriber))).scalars().all()
-    return [subscriber.chat_id for subscriber in result]
+async def get_subscription(
+    session: AsyncSession, subscription_id: int
+) -> Subscription | None:
+    return await session.get(Subscription, subscription_id)
+
+
+async def get_subscriptions(
+    session: AsyncSession, chat_id: int = None
+) -> list[Subscription]:
+    query = select(Subscription)
+    if chat_id:
+        query = query.where(Subscription.chat_id == chat_id)
+    return (await session.execute(query)).scalars().all()
 
 
 class Previous(Base):
