@@ -26,7 +26,7 @@ from db import (
     get_previous,
 )
 
-FROM_ASSET, TO_ASSET, THRESHOLD = range(3)
+FROM_ASSET, TO_ASSET, THRESHOLD, CUSTOM_THRESHOLD = range(4)
 
 
 def inline_keyboard(assets: Iterable[str]):
@@ -58,20 +58,21 @@ async def subscribe(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 async def from_asset(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     query = update.callback_query
     await query.answer()
-    await query.edit_message_text("Select the receive asset for your notifications.")
     available = context.chat_data["available_pairs"][query.data]
-    await query.edit_message_reply_markup(inline_keyboard(available.keys()))
+    await query.edit_message_text(
+        "Select the receive asset for your notifications.",
+        reply_markup=inline_keyboard(available.keys()),
+    )
     context.chat_data["from_asset"] = query.data
     return TO_ASSET
 
 
 async def to_asset(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     query = update.callback_query
+    await query.answer()
     await query.edit_message_text(
         "Select a threshold percentage for your notifications. You can also enter your own value.",
-    )
-    await query.edit_message_reply_markup(
-        InlineKeyboardMarkup(
+        reply_markup=InlineKeyboardMarkup(
             [
                 [
                     InlineKeyboardButton(f"{value}%", callback_data=value)
@@ -79,7 +80,7 @@ async def to_asset(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
                 ],
                 [InlineKeyboardButton("Custom", callback_data="custom")],
             ]
-        )
+        ),
     )
     context.chat_data["to_asset"] = query.data
     return THRESHOLD
@@ -117,7 +118,7 @@ async def threshold(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         await query.message.chat.send_message(
             "OK. Send me the fee threshold for your notifications."
         )
-        return THRESHOLD
+        return CUSTOM_THRESHOLD
 
     await save_threshold(update, context, query.data.strip("%"))
 
@@ -137,10 +138,8 @@ subscribe_handler = ConversationHandler(
     states={
         FROM_ASSET: [CallbackQueryHandler(from_asset)],
         TO_ASSET: [CallbackQueryHandler(to_asset)],
-        THRESHOLD: [
-            CallbackQueryHandler(threshold),
-            MessageHandler(filters.TEXT, custom_threshold),
-        ],
+        THRESHOLD: [CallbackQueryHandler(threshold)],
+        CUSTOM_THRESHOLD: [MessageHandler(filters.TEXT, custom_threshold)],
     },
     fallbacks=[entry_point],
 )
