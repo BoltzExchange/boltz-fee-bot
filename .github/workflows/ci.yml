@@ -27,5 +27,14 @@ jobs:
       - name: Run ruff checks
         run: uv run ruff check .
 
+      - name: Setup postgres
+        run: make postgres
+
       - name: Run tests
         run: uv run pytest .
+        env:
+          DATABASE_URL: "postgresql+asyncpg://boltz:boltz@localhost:5432/fees"
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          TEST_API_ID: ${{ secrets.TEST_API_ID }}
+          TEST_API_HASH: ${{ secrets.TEST_API_HASH }}
+          TEST_API_SESSION: ${{ secrets.TEST_API_SESSION }}
