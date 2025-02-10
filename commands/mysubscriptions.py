@@ -74,7 +74,11 @@ async def select(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def selected_subscription(
     session: AsyncSession, update: Update, context: ContextTypes.DEFAULT_TYPE
 ):
-    subscription = await get_subscription(session, int(context.chat_data["selection"]))
+    try:
+        selection = int(context.chat_data.get("selection"))
+        subscription = await get_subscription(session, selection)
+    except ValueError | TypeError:
+        subscription = None
     if not subscription:
         await update.effective_chat.send_message(
             "Could not get subscription. Try /mysubscriptions again."
@@ -122,8 +126,8 @@ entry_point = CommandHandler("mysubscriptions", list_subscriptions)
 mysubscriptions_handler = ConversationHandler(
     entry_points=[entry_point],
     states={
-        SELECT: [CallbackQueryHandler(select)],
-        ACTION: [CallbackQueryHandler(action)],
+        SELECT: [CallbackQueryHandler(select, pattern=r"^\d+$")],
+        ACTION: [CallbackQueryHandler(action, pattern=r"^(edit|remove)$")],
         UPDATE_THRESHOLD: [MessageHandler(filters.TEXT, update_threshold)],
     },
     fallbacks=[entry_point],
