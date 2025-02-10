@@ -36,6 +36,10 @@ async def subscribe(
         await wait()
         custom_message = await conv.get_response()
         assert "Send me the fee threshold" in custom_message.text
+        await conv.send_message("abc")
+        await wait()
+        error = await conv.get_response()
+        assert "Invalid" in error.text
         await conv.send_message("0.5")
     else:
         threshold_button = subscribe.buttons[0][0]
@@ -63,7 +67,9 @@ async def test_subscribe(
     await subscribe(conv, send_asset, receive_asset, custom_threshold)
 
 
-async def select_subscription(conv: Conversation, send_asset: str, receive_asset: str, threshold: str = None):
+async def select_subscription(
+    conv: Conversation, send_asset: str, receive_asset: str, threshold: str = None
+):
     await conv.send_message("/mysubscriptions")
     my_subscriptions = await conv.get_response()
     assert "You are subscribed" in my_subscriptions.text
@@ -91,12 +97,20 @@ async def test_mysubscriptions(conv: Conversation):
     await subscribe(conv, send_asset, receive_asset, False)
 
     selected = await select_subscription(conv, send_asset, receive_asset)
+
     edit_button = get_button_with_text(selected, "Edit threshold")
     assert edit_button is not None
     await edit_button.click()
     await wait()
     edit_message = await conv.get_response()
     assert "Send me the new fee threshold" in edit_message.text
+
+    wrong_threshold = "invalid"
+    await conv.send_message(wrong_threshold)
+    await wait()
+    error = await conv.get_response()
+    assert "Invalid" in error.text
+
     new_threshold = "0.6"
     await conv.send_message(new_threshold)
     await wait()

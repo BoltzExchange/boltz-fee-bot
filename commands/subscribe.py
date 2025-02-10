@@ -101,7 +101,7 @@ async def to_asset(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
 async def save_threshold(
     update: Update, context: ContextTypes.DEFAULT_TYPE, fee_threshold: str
-):
+) -> int | None:
     chat = update.effective_chat
     async with db_session(context) as session:
         try:
@@ -122,6 +122,7 @@ async def save_threshold(
             logging.info(f"Added: {subscription}")
         else:
             await chat.send_message("You are already subscribed!")
+        return ConversationHandler.END
 
 
 async def threshold(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -133,15 +134,11 @@ async def threshold(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         )
         return CUSTOM_THRESHOLD
 
-    await save_threshold(update, context, query.data.strip("%"))
-
-    return ConversationHandler.END
+    return await save_threshold(update, context, query.data)
 
 
 async def custom_threshold(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    await save_threshold(update, context, update.message.text)
-
-    return ConversationHandler.END
+    return await save_threshold(update, context, update.message.text)
 
 
 entry_point = CommandHandler("subscribe", subscribe)
