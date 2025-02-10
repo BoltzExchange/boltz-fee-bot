@@ -13,6 +13,7 @@ postgres:
 		-e POSTGRES_DB=$(POSTGRES_DB) \
 		-p $(POSTGRES_PORT):5432 \
 		postgres:17-alpine
+	docker exec boltz-fees-postgres bash -c "while ! pg_isready -U $(POSTGRES_USER) -d $(POSTGRES_DB); do sleep 1; done"
 
 postgres-stop:
 	docker stop boltz-fees-postgres

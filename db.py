@@ -2,7 +2,7 @@ from sqlalchemy import Column, Text, JSON, BigInteger, delete, DECIMAL
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 from telegram.ext import ContextTypes
 
 from consts import Fees
