@@ -16,3 +16,16 @@ postgres:
 
 postgres-stop:
 	docker stop boltz-fees-postgres
+
+run:
+	uv run alembic upgrade head
+	uv run bot.py
+
+test:
+	uv run pytest
+
+format:
+	uv run ruff format
+
+check:
+	uv run ruff check --fix
