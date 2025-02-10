@@ -2,6 +2,7 @@ import os
 import subprocess
 from typing import Optional
 
+import pytest
 import pytest_asyncio
 from telethon.tl.custom import Conversation
 
@@ -30,21 +31,22 @@ class TestSettings(Settings):
     test_api_id: int
     test_api_hash: str
     test_api_session: Optional[str]
+    test_bot_name: str
 
-    class Config:
-        env_file = ".env"
-        extra = "allow"
+
+@pytest.fixture(scope="session")
+def test_settings():
+    return TestSettings()
 
 
 @pytest_asyncio.fixture(scope="session")
-async def telegram_client():
+async def telegram_client(test_settings):
     """Connect to Telegram user for testing."""
-    settings = TestSettings()
 
     client = TelegramClient(
-        StringSession(settings.test_api_session),
-        settings.test_api_id,
-        settings.test_api_hash,
+        StringSession(test_settings.test_api_session),
+        test_settings.test_api_id,
+        test_settings.test_api_hash,
         sequential_updates=True,
     )
     await client.connect()
@@ -57,9 +59,9 @@ async def telegram_client():
 
 
 @pytest_asyncio.fixture(scope="session")
-async def conv(telegram_client: TelegramClient) -> Conversation:
+async def conv(telegram_client: TelegramClient, test_settings) -> Conversation:
     """Open conversation with the bot."""
     async with telegram_client.conversation(
-        "@boltz_fees_bot", timeout=3, max_messages=10000
+        f"@{test_settings.test_bot_name}", timeout=3, max_messages=10000
     ) as conv:
         yield conv

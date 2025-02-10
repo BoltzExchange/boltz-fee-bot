@@ -1,5 +1,3 @@
-# tests/e2e/get_session_string.py
-
 from telethon import TelegramClient
 from telethon.sessions import StringSession
 
