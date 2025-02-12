@@ -81,10 +81,9 @@ async def select_subscription(
     await conv.send_message("/mysubscriptions")
     my_subscriptions = await conv.get_response()
     assert "You are subscribed" in my_subscriptions.text
-    text = f"{send_asset} -> {receive_asset}"
+    button = get_button_with_text(my_subscriptions, f"{send_asset} -> {receive_asset}")
     if threshold:
-        text += f" below {threshold}%"
-    button = get_button_with_text(my_subscriptions, text)
+        assert threshold in button.text
 
     await button.click()
     await wait()
