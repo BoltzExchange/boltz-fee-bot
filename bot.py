@@ -19,15 +19,11 @@ from db import (
 )
 from settings import Settings
 from commands.subscribe import subscribe_handler
-from utils import encode_url_params
+from utils import encode_url_params, get_fee
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
 logging.getLogger("apscheduler").setLevel(logging.WARN)
 logging.getLogger("httpx").setLevel(logging.WARN)
-
-
-def get_fee(fees: Fees, subscription: Subscription) -> float | None:
-    return fees.get(subscription.from_asset, {}).get(subscription.to_asset, None)
 
 
 async def notify_subscription(

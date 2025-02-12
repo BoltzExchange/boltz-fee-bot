@@ -25,6 +25,7 @@ from db import (
     get_subscriptions,
     get_previous,
 )
+from utils import encode_url_params, get_fee
 
 FROM_ASSET, TO_ASSET, THRESHOLD, CUSTOM_THRESHOLD = range(4)
 
@@ -116,8 +117,12 @@ async def save_threshold(
             return
 
         if await add_subscription(session, subscription):
+            latest = await get_previous(session, ALL_FEES)
+            current_value = get_fee(latest, subscription)
+            url = encode_url_params(subscription.from_asset, subscription.to_asset)
             await chat.send_message(
-                f"You have subscribed to fee alerts for {subscription.pretty_string()}!",
+                f"You have subscribed to fee alerts for *{subscription.pretty_string()}*!\nCurrent fees: [{current_value}%]({url})",
+                parse_mode="markdown",
             )
             logging.info(f"Added: {subscription}")
         else:
