@@ -2,7 +2,7 @@ from sqlalchemy import Column, Text, JSON, BigInteger, delete, DECIMAL
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 from telegram.ext import ContextTypes
 
 from consts import Fees
@@ -22,7 +22,7 @@ class Subscription(Base):
         return f"Subscription(chat_id={self.chat_id}, from_asset={self.from_asset}, to_asset={self.to_asset}, fee_threshold={self.fee_threshold})"
 
     def pretty_string(self):
-        return f"{self.from_asset} -> {self.to_asset} below {self.fee_threshold}%"
+        return f"{self.from_asset} -> {self.to_asset} at {self.fee_threshold}%"
 
 
 def db_session(context: ContextTypes.DEFAULT_TYPE) -> AsyncSession:
