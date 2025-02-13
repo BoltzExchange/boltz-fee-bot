@@ -36,7 +36,7 @@ async def notify_subscription(
 
     url = encode_url_params(from_asset, to_asset)
     threshold_msg = (
-        f"has reached {subscription.fee_threshold}%"
+        f"have reached {subscription.fee_threshold}%"
         if get_fee(fees, subscription) <= subscription.fee_threshold
         else f"are above {subscription.fee_threshold}% again"
     )
