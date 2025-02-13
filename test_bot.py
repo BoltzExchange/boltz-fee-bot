@@ -9,6 +9,15 @@ from db import Subscription
     "current_fees, previous_fees, from_asset, to_asset, threshold, expected, test_description",
     [
         (
+            {"BTC": {"LN": 1.2}},
+            {"BTC": {"LN": 1.0}},
+            "BTC",
+            "LN",
+            1.0,
+            True,
+            "fee exactly at threshold",
+        ),
+        (
             {"BTC": {"LN": 0.8}},
             {"BTC": {"LN": 1.2}},
             "BTC",
@@ -25,6 +34,15 @@ from db import Subscription
             1.0,
             True,
             "LN to BTC fee goes above threshold",
+        ),
+        (
+            {"LN": {"BTC": 0.8}},
+            {"LN": {"BTC": 1.0}},
+            "LN",
+            "BTC",
+            1.0,
+            False,
+            "fee goes back to threshold",
         ),
         (
             {"L-BTC": {"RBTC": 1.5}},
