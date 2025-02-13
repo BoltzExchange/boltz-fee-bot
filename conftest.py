@@ -1,15 +1,21 @@
 import asyncpg
 import pytest_asyncio
+from pydantic import ValidationError
 from sqlalchemy import make_url
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 
 from db import Base
-from settings import Settings
+from settings import DbSettings
 
 
 @pytest_asyncio.fixture(scope="session")
 async def test_db_url():
-    settings = Settings()
+    try:
+        settings = DbSettings()
+    except ValidationError:
+        settings = DbSettings(
+            database_url="postgresql+asyncpg://boltz:boltz@localhost:5433/fees"
+        )
     url = make_url(settings.database_url)
     conn = await asyncpg.connect(
         url.set(drivername="postgresql").render_as_string(False)
