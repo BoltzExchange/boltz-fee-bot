@@ -1,6 +1,11 @@
 from urllib.parse import urlencode
 
-from consts import PRO_URL, SwapType
+from consts import PRO_URL, SwapType, Fees
+from db import Subscription
+
+
+def get_fee(fees: Fees, subscription: Subscription) -> float | None:
+    return fees.get(subscription.from_asset, {}).get(subscription.to_asset, None)
 
 
 def currency_to_asset(swap_type: SwapType, currency: str, is_send: bool):
