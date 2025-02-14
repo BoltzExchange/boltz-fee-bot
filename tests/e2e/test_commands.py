@@ -1,15 +1,7 @@
 import pytest
-from pydantic import ValidationError
 from telethon.tl.custom import Conversation
 
-from tests.e2e.conftest import TestSettings
 from tests.helpers import get_button_with_text, wait
-
-
-try:
-    TestSettings()
-except ValidationError as e:
-    pytest.skip(reason=f"Test settings not set {e}", allow_module_level=True)
 
 
 async def remove_subscriptions(conv: Conversation):

@@ -4,12 +4,12 @@ from typing import Optional
 
 import pytest
 import pytest_asyncio
+from pydantic import ValidationError
+from pydantic_settings import BaseSettings
 from telethon.tl.custom import Conversation
 
 from telethon import TelegramClient
 from telethon.sessions import StringSession
-
-from settings import Settings
 
 
 @pytest_asyncio.fixture(autouse=True, scope="session")
@@ -27,7 +27,7 @@ def bot(test_db_url):
     process.wait()
 
 
-class TestSettings(Settings):
+class Settings(BaseSettings):
     test_api_id: int
     test_api_hash: str
     test_api_session: Optional[str]
@@ -36,7 +36,10 @@ class TestSettings(Settings):
 
 @pytest.fixture(scope="session")
 def test_settings():
-    return TestSettings()
+    try:
+        return Settings()
+    except ValidationError as e:
+        pytest.skip(reason=f"Test settings not set {e}")
 
 
 @pytest_asyncio.fixture(scope="session")
