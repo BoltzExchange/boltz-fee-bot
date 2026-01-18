@@ -117,9 +117,10 @@ async def test_check_fees(db_session: AsyncSession):
     ]
     db_session.add_all(subscriptions)
     await db_session.commit()
-    result = await check_fees(db_session, current_fees)
-    assert len(result) == 0
+    telegram_result, ntfy_result = await check_fees(db_session, current_fees)
+    assert len(telegram_result) == 0
+    assert len(ntfy_result) == 0
 
     current_fees = {"BTC": {"LN": 0.8}}
-    result = await check_fees(db_session, current_fees)
-    assert result[0].id == subscriptions[0].id, "Failed to check fees"
+    telegram_result, ntfy_result = await check_fees(db_session, current_fees)
+    assert telegram_result[0].id == subscriptions[0].id, "Failed to check fees"
