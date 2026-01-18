@@ -83,7 +83,9 @@ async def notify_ntfy_subscription(
         )
         logging.debug(f"ntfy notification sent to topic '{subscription.ntfy_topic}'")
     except Exception as e:
-        logging.error(f"Error notifying ntfy subscription {subscription.ntfy_topic}: {e}")
+        logging.error(
+            f"Error notifying ntfy subscription {subscription.ntfy_topic}: {e}"
+        )
 
 
 def check_subscription(

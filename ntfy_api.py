@@ -195,7 +195,9 @@ async def delete_subscriptions_by_topic(
     await remove_ntfy_subscriptions_by_topic(session, ntfy_topic)
     logging.info(f"Deleted all ntfy subscriptions for topic: {ntfy_topic}")
 
-    return MessageResponse(message=f"All subscriptions for topic '{ntfy_topic}' deleted")
+    return MessageResponse(
+        message=f"All subscriptions for topic '{ntfy_topic}' deleted"
+    )
 
 
 @app.get("/health", summary="Health check")

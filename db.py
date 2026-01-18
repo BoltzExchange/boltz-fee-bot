@@ -137,7 +137,9 @@ async def get_ntfy_subscriptions(
 async def remove_ntfy_subscriptions_by_topic(
     session: AsyncSession, ntfy_topic: str
 ) -> bool:
-    statement = delete(NtfySubscription).where(NtfySubscription.ntfy_topic == ntfy_topic)
+    statement = delete(NtfySubscription).where(
+        NtfySubscription.ntfy_topic == ntfy_topic
+    )
     await session.execute(statement)
     await session.commit()
     return True
