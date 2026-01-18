@@ -16,7 +16,10 @@ from db import (
     upsert_previous,
     Subscription,
     get_subscriptions,
+    NtfySubscription,
+    get_ntfy_subscriptions,
 )
+from ntfy import publish as ntfy_publish
 from settings import Settings
 from commands.subscribe import subscribe_handler
 from utils import encode_url_params, get_fee
@@ -51,8 +54,40 @@ async def notify_subscription(
         logging.error(f"Error notifying subscription {subscription.chat_id}: {e}")
 
 
+async def notify_ntfy_subscription(
+    client: AsyncClient,
+    settings: Settings,
+    subscription: NtfySubscription,
+    fees: Fees,
+):
+    from_asset = subscription.from_asset
+    to_asset = subscription.to_asset
+    current_fee = get_fee(fees, subscription)
+
+    url = encode_url_params(from_asset, to_asset)
+    threshold_msg = (
+        f"have reached {subscription.fee_threshold}%"
+        if current_fee <= subscription.fee_threshold
+        else f"are above {subscription.fee_threshold}% again"
+    )
+    message = f"Fees for {from_asset} -> {to_asset} {threshold_msg}\nCurrent: {current_fee}%\n{url}"
+    title = f"Boltz Fee Alert: {from_asset} -> {to_asset}"
+
+    try:
+        await ntfy_publish(
+            client=client,
+            settings=settings,
+            topic=subscription.ntfy_topic,
+            message=message,
+            title=title,
+        )
+        logging.debug(f"ntfy notification sent to topic '{subscription.ntfy_topic}'")
+    except Exception as e:
+        logging.error(f"Error notifying ntfy subscription {subscription.ntfy_topic}: {e}")
+
+
 def check_subscription(
-    current: Fees, previous: Fees, subscription: Subscription
+    current: Fees, previous: Fees, subscription: Subscription | NtfySubscription
 ) -> bool:
     fee = get_fee(current, subscription)
     previous_fee = get_fee(previous, subscription)
@@ -64,17 +99,30 @@ def check_subscription(
     return below or above
 
 
-async def check_fees(session: AsyncSession, current: Fees) -> list[Subscription]:
+async def check_fees(
+    session: AsyncSession, current: Fees
+) -> tuple[list[Subscription], list[NtfySubscription]]:
     previous = await get_previous(session, ALL_FEES)
-    result = []
+    telegram_result = []
+    ntfy_result = []
+
     if previous:
-        result = [
+        # Check Telegram subscriptions
+        telegram_result = [
             subscription
             for subscription in await get_subscriptions(session)
             if check_subscription(current, previous, subscription)
         ]
+
+        # Check ntfy subscriptions
+        ntfy_result = [
+            subscription
+            for subscription in await get_ntfy_subscriptions(session)
+            if check_subscription(current, previous, subscription)
+        ]
+
     await upsert_previous(session, ALL_FEES, current)
-    return result
+    return telegram_result, ntfy_result
 
 
 def main():
@@ -104,13 +152,27 @@ def main():
         async def monitor_fees(app: Application):
             current = await get_all_fees(client)
             async with async_session() as session:
-                notifications = await check_fees(session, current)
-            if len(notifications) > 0:
-                logging.info(
-                    f"Sending notifications to {len(notifications)} subscriptions"
+                telegram_notifications, ntfy_notifications = await check_fees(
+                    session, current
                 )
-                for subscription in notifications:
+
+            # Send Telegram notifications
+            if len(telegram_notifications) > 0:
+                logging.info(
+                    f"Sending Telegram notifications to {len(telegram_notifications)} subscriptions"
+                )
+                for subscription in telegram_notifications:
                     await notify_subscription(app.bot, subscription, current)
+
+            # Send ntfy notifications
+            if len(ntfy_notifications) > 0:
+                logging.info(
+                    f"Sending ntfy notifications to {len(ntfy_notifications)} subscriptions"
+                )
+                for subscription in ntfy_notifications:
+                    await notify_ntfy_subscription(
+                        client, settings, subscription, current
+                    )
 
         application.post_init = post_init
         application.post_shutdown = post_shutdown

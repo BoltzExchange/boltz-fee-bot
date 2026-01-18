@@ -22,6 +22,9 @@ run:
 	uv run alembic upgrade head
 	uv run bot.py
 
+run-ntfy-api:
+	uv run uvicorn ntfy_api:app --host 0.0.0.0 --port 8000
+
 test:
 	uv run pytest
 

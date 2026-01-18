@@ -65,6 +65,18 @@ async def get_subscriptions(
     return (await session.execute(query)).scalars().all()
 
 
+class NtfySubscription(Base):
+    __tablename__ = "ntfy_subscriptions"
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    ntfy_topic = Column(Text, nullable=False)
+    from_asset = Column(Text, nullable=False)
+    to_asset = Column(Text, nullable=False)
+    fee_threshold = Column(DECIMAL, nullable=False)
+
+    def __str__(self):
+        return f"NtfySubscription(ntfy_topic={self.ntfy_topic}, from_asset={self.from_asset}, to_asset={self.to_asset}, fee_threshold={self.fee_threshold})"
+
+
 class Previous(Base):
     __tablename__ = "previous"
     key = Column(Text, primary_key=True)
@@ -87,3 +99,45 @@ async def get_previous(session: AsyncSession, key: str) -> Fees | None:
     if not result:
         return None
     return result.value  # type: ignore
+
+
+async def add_ntfy_subscription(
+    session: AsyncSession, subscription: NtfySubscription
+) -> bool:
+    try:
+        session.add(subscription)
+        await session.commit()
+    except IntegrityError:
+        return False
+    return True
+
+
+async def remove_ntfy_subscription(
+    session: AsyncSession, subscription: NtfySubscription
+):
+    await session.delete(subscription)
+    await session.commit()
+
+
+async def get_ntfy_subscription(
+    session: AsyncSession, subscription_id: int
+) -> NtfySubscription | None:
+    return await session.get(NtfySubscription, subscription_id)
+
+
+async def get_ntfy_subscriptions(
+    session: AsyncSession, ntfy_topic: str | None = None
+) -> list[NtfySubscription]:
+    query = select(NtfySubscription)
+    if ntfy_topic:
+        query = query.where(NtfySubscription.ntfy_topic == ntfy_topic)
+    return (await session.execute(query)).scalars().all()
+
+
+async def remove_ntfy_subscriptions_by_topic(
+    session: AsyncSession, ntfy_topic: str
+) -> bool:
+    statement = delete(NtfySubscription).where(NtfySubscription.ntfy_topic == ntfy_topic)
+    await session.execute(statement)
+    await session.commit()
+    return True
