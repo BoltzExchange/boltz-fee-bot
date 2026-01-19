@@ -23,4 +23,4 @@ WORKDIR /app
 COPY --from=builder --chown=app:app /app /app
 
 ENV PATH="/app/.venv/bin:$PATH"
-CMD ["sh", "-c", "alembic upgrade head && python bot.py"]
+CMD ["sh", "-c", "python bot.py"]

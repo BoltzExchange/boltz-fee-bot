@@ -1,0 +1,32 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    logging:
+      driver: loki
+      options:
+        loki-url: http://127.0.0.1:3100/loki/api/v1/push
+    user: root
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fees -d fees"]
+      interval: 30s
+      timeout: 60s
+      retries: 1
+      start_period: 30s
+    volumes:
+      - ./postgres:/var/lib/postgresql/data:z
+    environment:
+      - PGDATA=/var/lib/postgresql/data/pgdata
+      - POSTGRES_DB=fees
+      - POSTGRES_USER=fees
+      - POSTGRES_PASSWORD=fees
+
+  bot:
+    image: boltz/fee-bot:latest
+    logging:
+      driver: loki
+      options:
+        loki-url: http://127.0.0.1:3100/loki/api/v1/push
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file: .env
