@@ -2,7 +2,6 @@
 
 import logging
 from decimal import Decimal, InvalidOperation
-from typing import Callable, Awaitable
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,7 +15,6 @@ from db import (
     remove_all_subscriptions,
     get_previous,
     PLATFORM_TELEGRAM,
-    PLATFORM_SIMPLEX,
 )
 from utils import encode_url_params, get_fee
 
@@ -133,7 +131,9 @@ async def update_subscription_threshold(
     return True, "Threshold updated."
 
 
-async def delete_subscription(session: AsyncSession, subscription_id: int) -> tuple[bool, str]:
+async def delete_subscription(
+    session: AsyncSession, subscription_id: int
+) -> tuple[bool, str]:
     """
     Delete a subscription.
 

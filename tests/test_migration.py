@@ -2,14 +2,12 @@
 
 import pytest
 from decimal import Decimal
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from db import (
     Subscription,
     add_subscription,
     get_subscriptions,
-    get_subscription,
     PLATFORM_TELEGRAM,
     PLATFORM_SIMPLEX,
 )
@@ -17,7 +15,9 @@ from db import (
 
 @pytest.mark.db
 @pytest.mark.asyncio(loop_scope="session")
-async def test_migration_preserves_existing_telegram_subscriptions(db_session: AsyncSession):
+async def test_migration_preserves_existing_telegram_subscriptions(
+    db_session: AsyncSession,
+):
     """Verify existing Telegram subscriptions work with new schema."""
     # Create a Telegram subscription (simulating pre-migration data)
     telegram_sub = Subscription(
@@ -35,7 +35,11 @@ async def test_migration_preserves_existing_telegram_subscriptions(db_session: A
 
     found = False
     for sub in subscriptions:
-        if sub.chat_id == 123456789 and sub.from_asset == "BTC" and sub.to_asset == "LN":
+        if (
+            sub.chat_id == 123456789
+            and sub.from_asset == "BTC"
+            and sub.to_asset == "LN"
+        ):
             assert sub.platform == PLATFORM_TELEGRAM
             assert sub.platform_chat_id is None
             found = True

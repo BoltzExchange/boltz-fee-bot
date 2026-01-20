@@ -13,6 +13,8 @@ wheels/
 
 .env
 database.sqlite
+simplex-data/
+postgres-backup.tar.gz
 
 # Local docker-compose overrides (e.g., Loki logging)
 docker-compose.override.yml

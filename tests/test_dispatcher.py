@@ -2,7 +2,7 @@
 
 import pytest
 from decimal import Decimal
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 from db import Subscription, PLATFORM_TELEGRAM, PLATFORM_SIMPLEX
 from bot import notify_subscription, check_subscription
@@ -121,8 +121,11 @@ async def test_dispatcher_handles_missing_platform_gracefully(
 
 @pytest.mark.asyncio
 async def test_dispatcher_routes_to_correct_platforms(
-    mock_telegram_adapter, mock_simplex_adapter, 
-    telegram_subscription, simplex_subscription, sample_fees
+    mock_telegram_adapter,
+    mock_simplex_adapter,
+    telegram_subscription,
+    simplex_subscription,
+    sample_fees,
 ):
     """Test multiple subscriptions route to their respective platforms."""
     adapters = {

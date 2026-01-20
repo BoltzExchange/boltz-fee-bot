@@ -104,9 +104,7 @@ async def monitor_fees(
             notifications = await check_fees(session, current)
 
         if len(notifications) > 0:
-            logging.info(
-                f"Sending notifications to {len(notifications)} subscriptions"
-            )
+            logging.info(f"Sending notifications to {len(notifications)} subscriptions")
             for subscription in notifications:
                 await notify_subscription(adapters, subscription, current)
     except Exception as e:
@@ -188,7 +186,9 @@ async def run_multiplatform_bot():
         logging.info("SimpleX adapter started")
 
     if not adapters:
-        logging.error("No platform adapters configured! Set TELEGRAM_BOT_TOKEN or SIMPLEX_ENABLED=true")
+        logging.error(
+            "No platform adapters configured! Set TELEGRAM_BOT_TOKEN or SIMPLEX_ENABLED=true"
+        )
         return
 
     logging.info(f"Bot started with platforms: {list(adapters.keys())}")

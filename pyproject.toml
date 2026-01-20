@@ -33,7 +33,7 @@ pythonpath = [
 ]
 asyncio_default_fixture_loop_scope = "session"
 testpaths = ["tests"]
-norecursedirs = ["postgres", "simplex-bridge", "simplex-data", "docker", "node_modules", ".git"]
+norecursedirs = ["postgres", "simplex-adapter", "simplex-data", "node_modules", ".git"]
 markers = [
     "db: marks tests as requiring database connection (deselect with '-m \"not db\"')",
 ]

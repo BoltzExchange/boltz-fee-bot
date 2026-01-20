@@ -4,7 +4,12 @@ from typing import Callable, Awaitable
 from telegram import Bot, Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 
-from platforms.base import BotPlatform, PlatformUser, IncomingMessage, CommandHandler as BaseCommandHandler
+from platforms.base import (
+    BotPlatform,
+    PlatformUser,
+    IncomingMessage,
+    CommandHandler as BaseCommandHandler,
+)
 
 
 class TelegramAdapter(BotPlatform):

@@ -4,7 +4,7 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from platforms.telegram.adapter import TelegramAdapter
-from platforms.base import IncomingMessage, PlatformUser
+from platforms.base import IncomingMessage
 
 
 @pytest.fixture
