@@ -13,3 +13,6 @@ wheels/
 
 .env
 database.sqlite
+
+# Local docker-compose overrides (e.g., Loki logging)
+docker-compose.override.yml
