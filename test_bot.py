@@ -287,4 +287,4 @@ async def test_check_fees_mixed_platforms(db_session: AsyncSession):
     result = await check_fees(db_session, current_fees)
 
     platforms = set(s.platform for s in result)
-    assert PLATFORM_TELEGRAM in platforms or PLATFORM_SIMPLEX in platforms
+    assert PLATFORM_TELEGRAM in platforms and PLATFORM_SIMPLEX in platforms

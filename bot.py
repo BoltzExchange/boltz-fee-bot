@@ -189,6 +189,7 @@ async def run_multiplatform_bot():
         logging.error(
             "No platform adapters configured! Set TELEGRAM_BOT_TOKEN or SIMPLEX_ENABLED=true"
         )
+        await client.aclose()
         return
 
     logging.info(f"Bot started with platforms: {list(adapters.keys())}")

@@ -53,7 +53,13 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    # Restore chat_id to non-nullable (only safe if no simplex subscriptions exist)
+    # Delete non-Telegram subscriptions that have NULL chat_id
+    # This is required before we can set chat_id to NOT NULL
+    op.execute(
+        "DELETE FROM subscriptions WHERE platform != 'telegram' OR platform IS NULL"
+    )
+
+    # Now safe to restore chat_id to non-nullable
     op.alter_column(
         "subscriptions",
         "chat_id",

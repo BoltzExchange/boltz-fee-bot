@@ -34,8 +34,8 @@ async def get_available_pairs(
     if fees is None:
         return {}
 
-    # Filter out already subscribed pairs
-    available = dict(fees)
+    # Filter out already subscribed pairs (deep copy to avoid mutating cached fees)
+    available = {k: v.copy() for k, v in fees.items()}
     for subscription in subscriptions:
         if subscription.from_asset in available:
             available[subscription.from_asset].pop(subscription.to_asset, None)

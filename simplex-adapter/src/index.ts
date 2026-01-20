@@ -65,6 +65,10 @@ class SimplexAdapter {
 
       const parsedContactId = parseInt(contactId, 10);
       
+      if (isNaN(parsedContactId) || parsedContactId <= 0) {
+        return res.status(400).json({ error: 'Invalid contactId' });
+      }
+
       // Test mode: contact IDs >= 90000 are fake test contacts
       // Just broadcast the response without actually sending via SimpleX
       if (parsedContactId >= 90000) {
@@ -126,27 +130,29 @@ class SimplexAdapter {
     });
 
     // TEST ENDPOINT: Simulate an incoming message for e2e testing
-    // This allows test clients to inject messages as if they came from a real contact
-    this.app.post('/test/simulate_message', async (req, res) => {
-      const { contactId, displayName, text } = req.body;
-      
-      if (!contactId || !text) {
-        return res.status(400).json({ error: 'contactId and text are required' });
-      }
+    // Only available in non-production environments
+    if (process.env.NODE_ENV !== 'production') {
+      this.app.post('/test/simulate_message', async (req, res) => {
+        const { contactId, displayName, text } = req.body;
+        
+        if (!contactId || !text) {
+          return res.status(400).json({ error: 'contactId and text are required' });
+        }
 
-      console.log(`[TEST] Simulating message from ${displayName} (${contactId}): ${text}`);
+        console.log(`[TEST] Simulating message from ${displayName} (${contactId}): ${text}`);
 
-      // Broadcast the message as if it came from a real contact
-      this.broadcastEvent({
-        type: 'newMessage',
-        contactId: parseInt(contactId, 10),
-        displayName: displayName || 'TestUser',
-        text,
-        messageId: Date.now(),
+        // Broadcast the message as if it came from a real contact
+        this.broadcastEvent({
+          type: 'newMessage',
+          contactId: parseInt(contactId, 10),
+          displayName: displayName || 'TestUser',
+          text,
+          messageId: Date.now(),
+        });
+
+        res.json({ success: true });
       });
-
-      res.json({ success: true });
-    });
+    }
   }
 
   private broadcastEvent(event: AdapterEvent) {

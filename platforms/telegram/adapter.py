@@ -45,6 +45,12 @@ class TelegramAdapter(BotPlatform):
             telegram_handler = self._wrap_handler(command, handler)
             self.application.add_handler(CommandHandler(command, telegram_handler))
 
+        # Register any pending native handlers added before start()
+        if hasattr(self, "_pending_native_handlers"):
+            for native_handler in self._pending_native_handlers:
+                self.application.add_handler(native_handler)
+            self._pending_native_handlers.clear()
+
         await self.application.initialize()
         await self.application.start()
         await self.application.updater.start_polling()
@@ -79,7 +85,11 @@ class TelegramAdapter(BotPlatform):
         async def telegram_handler(
             update: Update, context: ContextTypes.DEFAULT_TYPE
         ) -> None:
-            if update.effective_user is None or update.message is None:
+            if (
+                update.effective_user is None
+                or update.message is None
+                or update.effective_chat is None
+            ):
                 return
 
             user = PlatformUser(
