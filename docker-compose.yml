@@ -5,6 +5,7 @@ services:
       driver: loki
       options:
         loki-url: http://127.0.0.1:3100/loki/api/v1/push
+        mode: non-blocking # Important: Prevents Docker daemon deadlock when Loki is unavailable 
     user: root
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U fees -d fees"]
@@ -26,6 +27,7 @@ services:
       driver: loki
       options:
         loki-url: http://127.0.0.1:3100/loki/api/v1/push
+        mode: non-blocking # Important: Prevents Docker daemon deadlock when Loki is unavailable
     depends_on:
       postgres:
         condition: service_healthy
