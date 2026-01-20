@@ -36,8 +36,3 @@ jobs:
         run: uv run pytest .
         env:
           DATABASE_URL: "postgresql+asyncpg://boltz:boltz@localhost:5433/fees"
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TEST_BOT_NAME: ${{ secrets.TEST_BOT_NAME }}
-          TEST_API_ID: ${{ secrets.TEST_API_ID }}
-          TEST_API_HASH: ${{ secrets.TEST_API_HASH }}
-          TEST_API_SESSION: ${{ secrets.TEST_API_SESSION }}
