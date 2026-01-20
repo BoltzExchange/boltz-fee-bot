@@ -4,21 +4,51 @@ services:
     user: root
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U fees -d fees"]
-      interval: 30s
-      timeout: 60s
-      retries: 1
-      start_period: 30s
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     volumes:
-      - ./postgres:/var/lib/postgresql/data:z
+      - postgres_data:/var/lib/postgresql/data
     environment:
-      - PGDATA=/var/lib/postgresql/data/pgdata
       - POSTGRES_DB=fees
       - POSTGRES_USER=fees
       - POSTGRES_PASSWORD=fees
+
+  simplex:
+    build:
+      context: ./simplex-adapter
+      dockerfile: Dockerfile
+    # Port not exposed to host - only accessible within Docker network for security
+    volumes:
+      - simplex_data:/app/data
+    environment:
+      - ADAPTER_PORT=3000
+      - BOT_NAME=${SIMPLEX_BOT_NAME:-Boltz Pro Fee Bot}
+      - DB_FILE_PREFIX=/app/data/simplex_bot
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:3000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
   bot:
     image: boltz/fee-bot:latest
     depends_on:
       postgres:
         condition: service_healthy
-    env_file: .env
+      simplex:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://fees:fees@postgres:5432/fees
+      - SIMPLEX_ENABLED=true
+      - SIMPLEX_ADAPTER_URL=http://simplex:3000
+      # - TELEGRAM_BOT_TOKEN=your_token_here
+      - CHECK_INTERVAL=${CHECK_INTERVAL:-60}
+      - API_URL=${API_URL:-https://api.boltz.exchange}
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  simplex_data:
